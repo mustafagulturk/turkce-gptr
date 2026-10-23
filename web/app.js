@@ -1,26 +1,46 @@
 // Sohbet arayüzü: mesajları ekrana basar, modeli çalıştıran Worker ile konuşur.
 const $ = id => document.getElementById(id);
 const chat = $("sohbet"), form = $("form"), input = $("girdi"), send = $("gonder");
-const worker = new Worker(new URL("./worker.js?v=3", import.meta.url), { type: "module" });
 
 let messages = [];      // [{role: "kullanici"|"asistan", content}]
 let busy = false, current = null, maxTokens = 100;
 
-// Worker'ın kendisi yüklenemezse (ör. eski tarayıcı) bunu da ekranda göster.
-worker.onerror = e => { $("yukleme-yazi").textContent = `Model başlatılamadı: ${e.message || "bilinmeyen hata"}`; };
+const modelUrl = new URL("./model", import.meta.url).href;
 
 // Hangi adımda takıldığı ekrandan anlaşılsın: "Sayfa açılıyor" (HTML) →
-// "Model başlatılıyor" (bu dosya çalıştı) → "Model indiriliyor %0" (worker çalıştı).
+// "Model başlatılıyor" (bu dosya çalıştı) → "Model indiriliyor %0" (model kodu çalıştı).
 $("yukleme-yazi").textContent = "Model başlatılıyor…";
-let started = false;
-setTimeout(() => {
-  if (!started) $("yukleme-yazi").textContent = "Model başlatılamadı. Tarayıcınız bu sayfayı desteklemiyor olabilir; güncel Chrome veya Safari ile deneyin.";
-}, 20000);
 
-worker.postMessage({ type: "load", url: new URL("./model", import.meta.url).href });
+// Önce modeli ayrı bir iş parçacığında (Worker) çalıştırmayı dene. Bazı tarayıcılar
+// modül Worker'ını açamıyor; 8 saniye içinde ses gelmezse modeli sayfanın içinde
+// çalıştır (cevap üretilirken sayfa biraz takılabilir ama çalışır).
+let toModel, started = false;
+try {
+  const worker = new Worker(new URL("./worker.js?v=4", import.meta.url), { type: "module" });
+  worker.onmessage = e => { started = true; onMessage(e.data); };
+  worker.onerror = () => { if (!started) { worker.terminate(); runInPage(); } };
+  toModel = msg => worker.postMessage(msg);
+  toModel({ type: "load", url: modelUrl });
+  setTimeout(() => { if (!started) { worker.terminate(); runInPage(); } }, 8000);
+} catch {
+  runInPage();
+}
 
-worker.onmessage = ({ data }) => {
-  started = true;
+let inPage = false;
+async function runInPage() {
+  if (inPage) return;
+  inPage = started = true;
+  try {
+    const { startInPage } = await import("./worker.js?v=4");
+    const handle = startInPage(msg => setTimeout(() => onMessage(msg), 0));
+    toModel = msg => handle(msg);
+    toModel({ type: "load", url: modelUrl });
+  } catch (e) {
+    $("yukleme-yazi").textContent = `Model başlatılamadı: ${e.message || e}`;
+  }
+}
+
+function onMessage(data) {
   if (data.type === "progress") {
     $("ilerleme").style.width = `${Math.round(data.value * 100)}%`;
     $("yukleme-yazi").textContent = `Model indiriliyor… %${Math.round(data.value * 100)}`;
@@ -45,7 +65,7 @@ worker.onmessage = ({ data }) => {
     $("durum").textContent = `${data.tokens} token, saniyede ${data.tokPerSec.toFixed(1)} token`;
     finish();
   }
-};
+}
 
 function bubble(role, text) {
   const el = document.createElement("div");
@@ -66,7 +86,7 @@ function ask(text) {
   busy = true;
   send.textContent = "Durdur";
   input.value = "";
-  worker.postMessage({
+  toModel({
     type: "generate",
     messages,
     settings: { temperature: +$("sicaklik").value, topP: +$("topp").value, topK: 50, repetitionPenalty: 1.1, maxTokens },
@@ -81,7 +101,7 @@ function finish() {
 
 form.addEventListener("submit", e => {
   e.preventDefault();
-  if (busy) worker.postMessage({ type: "stop" });
+  if (busy) toModel({ type: "stop" });
   else ask(input.value);
 });
 input.addEventListener("keydown", e => {
