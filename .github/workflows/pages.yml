@@ -1,0 +1,47 @@
+name: sohbet-sayfasi
+
+# web/ klasörünü GitHub Pages'te yayınlar. Repoda bir Release varsa ve içinde
+# model.json + model.bin dosyaları bulunuyorsa, sayfa o (daha büyük) modeli
+# kullanır; yoksa web/model/ içindeki küçük model yayınlanır.
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/pages.yml"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  yayinla:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release'teki modeli al (varsa)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release download --repo "$GITHUB_REPOSITORY" --pattern 'model.json' --pattern 'model.bin' -D yeni_model 2>/dev/null \
+             && [ -f yeni_model/model.json ] && [ -f yeni_model/model.bin ]; then
+            cp yeni_model/model.json yeni_model/model.bin web/model/
+            echo "Release'teki model kullanılıyor"
+          else
+            echo "Release modeli yok, web/model içindeki küçük model kullanılıyor"
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deploy
+        uses: actions/deploy-pages@v4

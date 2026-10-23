@@ -11,6 +11,10 @@ Türkiye'nin ikinci bir tarafına sahip olan Bay Pirentt'in "kızgınlık" için
 
 Bu çıktı, 3.3 milyon parametrelik `mini` modelin normal bir işlemcide 38 dakikada, yaklaşık 1 milyon Türkçe token ile eğitilmesinden sonra alındı. Ekleri ve cümle yapısını öğrenmiş, ama anlamı henüz tutarsız; bu boyuttaki bir modelden beklenen tam olarak bu.
 
+## Tarayıcıda dene
+
+**[mustafagulturk.github.io/turkce-gptr](https://mustafagulturk.github.io/turkce-gptr/)** — model tamamen tarayıcınızda çalışır, sunucu yok. `web/gpt.js` tokenizer'ı ve transformer'ı (RoPE, dikkat, SwiGLU, KV cache) kütüphanesiz, düz JavaScript ile yeniden uygular; ağırlıklar int8'e sıkıştırılır. `tests/test_web.py` JS çıktısının PyTorch ile aynı olduğunu doğrular.
+
 ## Neler var?
 
 | Parça | Dosya | Ne yapıyor |
@@ -22,6 +26,7 @@ Bu çıktı, 3.3 milyon parametrelik `mini` modelin normal bir işlemcide 38 dak
 | İnce ayar | `turkce_gpt/finetune.py`, `chat.py` | Soru-cevap örnekleriyle sohbete alıştırma; sadece cevap kısmından öğrenir |
 | Değerlendirme | `turkce_gpt/evaluate.py` | Doğrulama kaybı, perplexity, bits-per-byte |
 | Üretim ve sohbet | `turkce_gpt/interactive.py` | Sıcaklık, top-k, top-p, tekrar cezası; akış halinde yazdırma |
+| Tarayıcı sürümü | `web/`, `turkce_gpt/export_web.py` | Modeli int8'e çevirir, JavaScript'te çalıştırır; telefonda da açılan sohbet sayfası |
 | Colab defteri | `notebooks/colab.ipynb` | Ücretsiz GPU'da Wikipedia ile baştan sona eğitim |
 | Testler | `tests/` | 77 test: causality, KV cache doğruluğu, tokenizer gidiş-dönüş, eğitim döngüsü... |
 
