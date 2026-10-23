@@ -1,4 +1,5 @@
-// Çınar'ın tarayıcıda çalışan hali.
+// Çınar'ın tarayıcıda çalışan hali (dosya adı "gpt.js" değil, çünkü reklam engelleyiciler
+// o adı Google reklam kodu sanıp engelliyor).
 //
 // PyTorch'taki turkce_gpt/model.py ve turkce_gpt/tokenizer.py'nin JavaScript
 // karşılığı. Hiçbir kütüphane kullanmaz: tokenizer, matris-vektör çarpımı,

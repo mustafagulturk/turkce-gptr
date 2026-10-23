@@ -1,4 +1,4 @@
-"""Tarayıcı sürümü (web/gpt.js) Python modeliyle aynı sonucu veriyor mu?
+"""Tarayıcı sürümü (web/motor.js) Python modeliyle aynı sonucu veriyor mu?
 
 Node.js kuruluysa JS tokenizer'ı ve JS ileri geçişini çalıştırıp PyTorch ile
 karşılaştırır. int8 nicemlemenin etkisini ayırmak için Python tarafında da

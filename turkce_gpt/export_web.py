@@ -2,7 +2,7 @@
 Modeli tarayıcıda çalışacak biçime çevirir:  python -m turkce_gpt web-aktar
 
 Tarayıcıda PyTorch yok. Bu yüzden ağırlıkları düz bir ikili dosyaya (model.bin)
-yazıyoruz; web/gpt.js bu dosyayı okuyup ileri geçişi JavaScript'te yapar.
+yazıyoruz; web/motor.js bu dosyayı okuyup ileri geçişi JavaScript'te yapar.
 Yanına model.json yazılır: model ayarları, tokenizer birleştirmeleri ve
 model.bin içinde hangi ağırlığın nerede durduğu (indeks).
 

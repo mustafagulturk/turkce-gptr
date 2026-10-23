@@ -16,7 +16,7 @@ $("yukleme-yazi").textContent = "Model başlatılıyor…";
 // çalıştır (cevap üretilirken sayfa biraz takılabilir ama çalışır).
 let toModel, started = false;
 try {
-  const worker = new Worker(new URL("./worker.js?v=4", import.meta.url), { type: "module" });
+  const worker = new Worker(new URL("./worker.js?v=5", import.meta.url), { type: "module" });
   worker.onmessage = e => { started = true; onMessage(e.data); };
   worker.onerror = () => { if (!started) { worker.terminate(); runInPage(); } };
   toModel = msg => worker.postMessage(msg);
@@ -31,7 +31,7 @@ async function runInPage() {
   if (inPage) return;
   inPage = started = true;
   try {
-    const { startInPage } = await import("./worker.js?v=4");
+    const { startInPage } = await import("./worker.js?v=5");
     const handle = startInPage(msg => setTimeout(() => onMessage(msg), 0));
     toModel = msg => handle(msg);
     toModel({ type: "load", url: modelUrl });

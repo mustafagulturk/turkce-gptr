@@ -1,6 +1,6 @@
 // tests/test_web.py tarafından çağrılır: JS tokenizer ve modelinin çıktısını JSON olarak basar.
 import { readFileSync } from "node:fs";
-import { GPT, Tokenizer } from "../web/gpt.js";
+import { GPT, Tokenizer } from "../web/motor.js";
 
 const [dir, inputPath] = process.argv.slice(2);
 const meta = JSON.parse(readFileSync(`${dir}/model.json`, "utf-8"));

@@ -13,7 +13,7 @@ Bu çıktı, 3.3 milyon parametrelik `mini` modelin normal bir işlemcide 38 dak
 
 ## Tarayıcıda dene
 
-**[mustafagulturk.github.io/turkce-gptr](https://mustafagulturk.github.io/turkce-gptr/)** — model tamamen tarayıcınızda çalışır, sunucu yok. `web/gpt.js` tokenizer'ı ve transformer'ı (RoPE, dikkat, SwiGLU, KV cache) kütüphanesiz, düz JavaScript ile yeniden uygular; ağırlıklar int8'e sıkıştırılır. `tests/test_web.py` JS çıktısının PyTorch ile aynı olduğunu doğrular.
+**[mustafagulturk.github.io/turkce-gptr](https://mustafagulturk.github.io/turkce-gptr/)** — model tamamen tarayıcınızda çalışır, sunucu yok. `web/motor.js` tokenizer'ı ve transformer'ı (RoPE, dikkat, SwiGLU, KV cache) kütüphanesiz, düz JavaScript ile yeniden uygular; ağırlıklar int8'e sıkıştırılır. `tests/test_web.py` JS çıktısının PyTorch ile aynı olduğunu doğrular.
 
 ## Neler var?
 
