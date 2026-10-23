@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Türkçe GPT</title>
+  <meta name="description" content="Sıfırdan yazılmış küçük bir Türkçe dil modeli. Tamamen tarayıcınızda çalışır.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23b4532a'/><text x='16' y='22' font-size='15' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'>TR</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Türkçe GPT</h1>
+      <p class="alt">Sıfırdan yazılmış küçük bir dil modeli · tamamen tarayıcınızda çalışır, hiçbir sunucuya veri gitmez</p>
+    </div>
+    <a class="kod" href="https://github.com/mustafagulturk/turkce-gptr" target="_blank" rel="noopener">Kaynak kod</a>
+  </header>
+
+  <main id="sohbet" aria-live="polite">
+    <div class="karsilama" id="karsilama">
+      <p><strong>Merhaba!</strong> Ben birkaç milyon parametrelik küçük bir modelim. Türkçe cümle kurabiliyorum ama bilgilerim çoğu zaman yanlış olur; beni bir deney olarak düşünün.</p>
+      <div id="yukleme">
+        <div class="cubuk"><div id="ilerleme"></div></div>
+        <span id="yukleme-yazi">Model indiriliyor…</span>
+      </div>
+      <div class="oneriler" id="oneriler" hidden>
+        <button>Merhaba, sen kimsin?</button>
+        <button>Gaziantep neyle ünlüdür?</button>
+        <button>Yapay zekâ nedir?</button>
+        <button>Bana bir tavsiye ver.</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <form id="form">
+      <textarea id="girdi" rows="1" placeholder="Bir şey yazın…" disabled></textarea>
+      <button id="gonder" type="submit" disabled>Gönder</button>
+    </form>
+    <details>
+      <summary>Ayarlar</summary>
+      <label>Sıcaklık <output id="sicaklik-deger">0.7</output>
+        <input id="sicaklik" type="range" min="0" max="1.5" step="0.1" value="0.7"></label>
+      <label>Top-p <output id="topp-deger">0.9</output>
+        <input id="topp" type="range" min="0.1" max="1" step="0.05" value="0.9"></label>
+      <button id="temizle" type="button">Sohbeti temizle</button>
+      <p id="durum" class="durum"></p>
+    </details>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

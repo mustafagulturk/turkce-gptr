@@ -8,6 +8,7 @@ Komutlar:
     degerlendir  Modelin doğrulama verisindeki başarısını ölçer
     uret         Verilen başlangıçtan metin üretir
     sohbet       Modelle etkileşimli sohbet
+    web-aktar    Modeli tarayıcıda çalışacak biçime çevirir (web/ sohbet sayfası için)
 
 Her komutun ayrıntısı için:  python -m turkce_gpt <komut> --help
 """
@@ -25,6 +26,7 @@ def main() -> None:
         "degerlendir": ("turkce_gpt.evaluate", "cli"),
         "uret": ("turkce_gpt.interactive", "generate_cli"),
         "sohbet": ("turkce_gpt.interactive", "chat_cli"),
+        "web-aktar": ("turkce_gpt.export_web", "cli"),
     }
     if len(sys.argv) < 2 or sys.argv[1] not in commands:
         print(__doc__)
