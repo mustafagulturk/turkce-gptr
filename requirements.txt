@@ -1,0 +1,10 @@
+# Türkçe GPT bağımlılıkları
+torch>=2.1
+numpy>=1.24
+
+# İsteğe bağlı: Wikipedia verisini HuggingFace'ten indirmek için
+# (python -m turkce_gpt veri --kaynak wikipedia). Colab'da: pip install datasets
+# datasets>=2.14
+
+# Testleri çalıştırmak için
+# pytest>=7

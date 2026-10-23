@@ -1,0 +1,15 @@
+# Üretilen veri ve modeller (büyük dosyalar, depoya girmez)
+veri/hazir/
+veri/onbellek/
+modeller/
+*.pt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
