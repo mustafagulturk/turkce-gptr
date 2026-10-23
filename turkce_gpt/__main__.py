@@ -9,6 +9,7 @@ Komutlar:
     uret         Verilen başlangıçtan metin üretir
     sohbet       Modelle etkileşimli sohbet
     web-aktar    Modeli tarayıcıda çalışacak biçime çevirir (web/ sohbet sayfası için)
+    web-ice-aktar  Tarayıcı modelini (model.json + model.bin) tekrar model.pt yapar
 
 Her komutun ayrıntısı için:  python -m turkce_gpt <komut> --help
 """
@@ -27,6 +28,7 @@ def main() -> None:
         "uret": ("turkce_gpt.interactive", "generate_cli"),
         "sohbet": ("turkce_gpt.interactive", "chat_cli"),
         "web-aktar": ("turkce_gpt.export_web", "cli"),
+        "web-ice-aktar": ("turkce_gpt.export_web", "import_cli"),
     }
     if len(sys.argv) < 2 or sys.argv[1] not in commands:
         print(__doc__)

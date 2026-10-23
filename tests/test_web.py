@@ -18,7 +18,7 @@ import torch
 from turkce_gpt.chat import encode_prompt
 from turkce_gpt.checkpoint import save_checkpoint
 from turkce_gpt.config import make_config
-from turkce_gpt.export_web import export, quantize_rows
+from turkce_gpt.export_web import export, import_web, quantize_rows
 from turkce_gpt.model import GPT
 from turkce_gpt.tokenizer import BPETokenizer
 
@@ -67,3 +67,19 @@ def test_js_matches_python(tmp_path):
                 p.copy_(torch.from_numpy(q.astype(np.float32) * scale[:, None]))
         logits, _ = model(torch.tensor([tokens]))
     np.testing.assert_allclose(np.array(js["logits"]), logits[0].numpy(), atol=2e-4)
+
+
+def test_import_web_roundtrip(tmp_path):
+    """web-aktar -> web-ice-aktar -> web-aktar aynı dosyaları vermeli."""
+    tok = BPETokenizer()
+    tok.train([TEXT] * 4, vocab_size=400)
+    torch.manual_seed(0)
+    model = GPT(make_config("deneme", tok.vocab_size, block_size=32)).eval()
+    save_checkpoint(tmp_path / "model.pt", model, tok, {})
+    export(tmp_path / "model.pt", tmp_path / "web1")
+
+    geri = import_web(tmp_path / "web1", tmp_path / "geri.pt")
+    assert geri.lm_head.weight is geri.tok_emb.weight  # weight tying korunmalı
+    export(tmp_path / "geri.pt", tmp_path / "web2")
+    assert (tmp_path / "web1" / "model.bin").read_bytes() == (tmp_path / "web2" / "model.bin").read_bytes()
+    assert (tmp_path / "web1" / "model.json").read_text() == (tmp_path / "web2" / "model.json").read_text()

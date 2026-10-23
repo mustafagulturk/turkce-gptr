@@ -24,8 +24,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .checkpoint import load_checkpoint
-from .tokenizer import SPECIAL_TOKENS
+from .checkpoint import load_checkpoint, save_checkpoint
+from .config import GPTConfig
+from .model import GPT
+from .tokenizer import SPECIAL_TOKENS, BPETokenizer
 
 
 def quantize_rows(w: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -81,6 +83,55 @@ def export(model_path: str | Path, out_dir: str | Path) -> dict:
     }
     (out_dir / "model.json").write_text(json.dumps(meta), encoding="utf-8")
     return meta
+
+
+def import_web(web_dir: str | Path, out_path: str | Path) -> GPT:
+    """Ters yön: model.json + model.bin'den tekrar eğitilebilir bir model.pt kurar.
+
+    Asıl model.pt elde yoksa (ör. Colab kapandı) yayındaki web modelinden devam
+    etmeyi sağlar. int8'den geri çözülen ağırlıklar aslının çok yakınıdır
+    (satır başına en fazla scale/2 hata), ince ayar için yeterince iyidir.
+    """
+    web_dir = Path(web_dir)
+    meta = json.loads((web_dir / "model.json").read_text(encoding="utf-8"))
+    raw = (web_dir / "model.bin").read_bytes()
+
+    def read(info: dict) -> np.ndarray:
+        dtype = np.dtype(info["dtype"])
+        count = int(np.prod(info["shape"]))
+        return np.frombuffer(raw, dtype=dtype, count=count, offset=info["offset"]).reshape(info["shape"])
+
+    model = GPT(GPTConfig(**meta["config"]))
+    state = model.state_dict()
+    for name, info in meta["tensors"].items():
+        if "q" in info:
+            w = read(info["q"]).astype(np.float32) * read(info["scale"])[:, None]
+        else:
+            w = read(info["f32"]).copy()
+        state[name] = torch.from_numpy(w)
+    state["lm_head.weight"] = state["tok_emb.weight"]  # weight tying
+    model.load_state_dict(state)
+
+    tokenizer = BPETokenizer()
+    for i, (a, b) in enumerate(meta["tokenizer"]["merges"]):
+        tokenizer.merges[(a, b)] = 256 + i
+        tokenizer.vocab[256 + i] = tokenizer.vocab[a] + tokenizer.vocab[b]
+    tokenizer._add_special_tokens()
+
+    save_checkpoint(out_path, model, tokenizer, {"kaynak": "web-ice-aktar"})
+    return model
+
+
+def import_cli(argv: list[str]) -> None:
+    p = argparse.ArgumentParser(
+        prog="python -m turkce_gpt web-ice-aktar",
+        description="Tarayıcı modelini (model.json + model.bin) tekrar model.pt'ye çevirir.",
+    )
+    p.add_argument("--web", required=True, help="model.json ve model.bin'in bulunduğu klasör")
+    p.add_argument("--cikti", required=True, help="yazılacak model.pt yolu")
+    args = p.parse_args(argv)
+    import_web(args.web, args.cikti)
+    print(f"Yazıldı: {args.cikti}")
 
 
 def cli(argv: list[str]) -> None:
