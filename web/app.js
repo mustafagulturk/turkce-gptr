@@ -12,6 +12,8 @@ worker.onmessage = ({ data }) => {
   if (data.type === "progress") {
     $("ilerleme").style.width = `${Math.round(data.value * 100)}%`;
     $("yukleme-yazi").textContent = `Model indiriliyor… %${Math.round(data.value * 100)}`;
+  } else if (data.type === "error") {
+    $("yukleme-yazi").textContent = `Model yüklenemedi: ${data.message}. Sayfayı yenilemeyi deneyin.`;
   } else if (data.type === "ready") {
     maxTokens = Math.min(100, Math.floor(data.config.block_size / 2));
     $("yukleme").hidden = true;

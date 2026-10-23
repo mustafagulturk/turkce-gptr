@@ -6,8 +6,13 @@ let tokenizer = null, model = null, stopped = false;
 
 self.onmessage = async ({ data }) => {
   if (data.type === "load") {
-    ({ tokenizer, model } = await loadModel(data.url, p => self.postMessage({ type: "progress", value: p })));
-    self.postMessage({ type: "ready", config: model.cfg });
+    try {
+      ({ tokenizer, model } = await loadModel(data.url, p => self.postMessage({ type: "progress", value: p })));
+      self.postMessage({ type: "ready", config: model.cfg });
+    } catch (e) {
+      // Hata sessizce kaybolmasın; sayfa "indiriliyor"da takılı kalmasın.
+      self.postMessage({ type: "error", message: String(e.message || e) });
+    }
   } else if (data.type === "stop") {
     stopped = true;
   } else if (data.type === "generate") {

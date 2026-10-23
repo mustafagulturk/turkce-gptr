@@ -242,18 +242,29 @@ export function sample(logits, history, { temperature = 0.7, topK = 50, topP = 0
 }
 
 export async function loadModel(baseUrl, onProgress = () => {}) {
-  const meta = await (await fetch(`${baseUrl}/model.json`)).json();
-  const res = await fetch(`${baseUrl}/model.bin`);
-  const total = Number(res.headers.get("content-length")) || meta.bin_bytes;
+  // cache: "no-cache" -> tarayıcı önbellekteki kopyayı kullanmadan önce sunucuya
+  // "değişti mi?" diye sorar. Model güncellenince eski model.json ile yeni
+  // model.bin'in karışmasını önler (değişmediyse dosya tekrar indirilmez).
+  const get = async name => {
+    const r = await fetch(`${baseUrl}/${name}`, { cache: "no-cache" });
+    if (!r.ok) throw new Error(`${name} indirilemedi (HTTP ${r.status})`);
+    return r;
+  };
+  const meta = await (await get("model.json")).json();
+  const res = await get("model.bin");
   const reader = res.body.getReader();
   const buf = new Uint8Array(meta.bin_bytes);
   let got = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
+    if (got + value.length > buf.length) throw new Error("model.bin, model.json ile uyuşmuyor");
     buf.set(value, got);
     got += value.length;
-    onProgress(got / total);
+    // Sunucu dosyayı sıkıştırıp gönderebildiği için content-length'e değil,
+    // model.json'daki gerçek boyuta göre ilerleme hesaplanır.
+    onProgress(got / buf.length);
   }
+  if (got !== buf.length) throw new Error("model.bin eksik indi");
   return { tokenizer: new Tokenizer(meta.tokenizer), model: new GPT(meta, buf.buffer) };
 }

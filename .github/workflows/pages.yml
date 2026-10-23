@@ -3,12 +3,14 @@ name: sohbet-sayfasi
 # web/ klasörünü GitHub Pages'te yayınlar. Repoda bir Release varsa ve içinde
 # model.json + model.bin dosyaları bulunuyorsa, sayfa o (daha büyük) modeli
 # kullanır; yoksa web/model/ içindeki küçük model yayınlanır.
+#
+# Yeni bir Release yükledikten sonra: Actions → sohbet-sayfasi → "Run workflow".
+# (Release olayıyla otomatik çalıştırılmıyor: o çalışma etiket (v1) üzerinden
+# başlar ve github-pages ortamı yalnızca main dalından yayına izin verir.)
 on:
   push:
     branches: [main]
     paths: ["web/**", ".github/workflows/pages.yml"]
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
