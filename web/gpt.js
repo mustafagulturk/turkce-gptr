@@ -251,6 +251,7 @@ export async function loadModel(baseUrl, onProgress = () => {}) {
     return r;
   };
   const meta = await (await get("model.json")).json();
+  onProgress(0);
   const res = await get("model.bin");
   const reader = res.body.getReader();
   const buf = new Uint8Array(meta.bin_bytes);

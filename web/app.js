@@ -1,7 +1,7 @@
 // Sohbet arayüzü: mesajları ekrana basar, modeli çalıştıran Worker ile konuşur.
 const $ = id => document.getElementById(id);
 const chat = $("sohbet"), form = $("form"), input = $("girdi"), send = $("gonder");
-const worker = new Worker(new URL("./worker.js?v=2", import.meta.url), { type: "module" });
+const worker = new Worker(new URL("./worker.js?v=3", import.meta.url), { type: "module" });
 
 let messages = [];      // [{role: "kullanici"|"asistan", content}]
 let busy = false, current = null, maxTokens = 100;
@@ -9,9 +9,18 @@ let busy = false, current = null, maxTokens = 100;
 // Worker'ın kendisi yüklenemezse (ör. eski tarayıcı) bunu da ekranda göster.
 worker.onerror = e => { $("yukleme-yazi").textContent = `Model başlatılamadı: ${e.message || "bilinmeyen hata"}`; };
 
+// Hangi adımda takıldığı ekrandan anlaşılsın: "Sayfa açılıyor" (HTML) →
+// "Model başlatılıyor" (bu dosya çalıştı) → "Model indiriliyor %0" (worker çalıştı).
+$("yukleme-yazi").textContent = "Model başlatılıyor…";
+let started = false;
+setTimeout(() => {
+  if (!started) $("yukleme-yazi").textContent = "Model başlatılamadı. Tarayıcınız bu sayfayı desteklemiyor olabilir; güncel Chrome veya Safari ile deneyin.";
+}, 20000);
+
 worker.postMessage({ type: "load", url: new URL("./model", import.meta.url).href });
 
 worker.onmessage = ({ data }) => {
+  started = true;
   if (data.type === "progress") {
     $("ilerleme").style.width = `${Math.round(data.value * 100)}%`;
     $("yukleme-yazi").textContent = `Model indiriliyor… %${Math.round(data.value * 100)}`;
