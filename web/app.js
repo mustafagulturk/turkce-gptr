@@ -1,10 +1,13 @@
 // Sohbet arayüzü: mesajları ekrana basar, modeli çalıştıran Worker ile konuşur.
 const $ = id => document.getElementById(id);
 const chat = $("sohbet"), form = $("form"), input = $("girdi"), send = $("gonder");
-const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+const worker = new Worker(new URL("./worker.js?v=2", import.meta.url), { type: "module" });
 
 let messages = [];      // [{role: "kullanici"|"asistan", content}]
 let busy = false, current = null, maxTokens = 100;
+
+// Worker'ın kendisi yüklenemezse (ör. eski tarayıcı) bunu da ekranda göster.
+worker.onerror = e => { $("yukleme-yazi").textContent = `Model başlatılamadı: ${e.message || "bilinmeyen hata"}`; };
 
 worker.postMessage({ type: "load", url: new URL("./model", import.meta.url).href });
 

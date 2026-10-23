@@ -1,6 +1,6 @@
 // Model ayrı bir iş parçacığında (Web Worker) çalışır; böylece cevap üretilirken
 // sayfa donmaz, yazı ekrana akarken kaydırma ve yazma devam eder.
-import { loadModel, sample } from "./gpt.js";
+import { loadModel, sample } from "./gpt.js?v=2";
 
 let tokenizer = null, model = null, stopped = false;
 
