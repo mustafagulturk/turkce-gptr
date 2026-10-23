@@ -1,8 +1,8 @@
 name: sohbet-sayfasi
 
-# web/ klasörünü GitHub Pages'te yayınlar. Repoda bir Release varsa ve içinde
-# model.json + model.bin dosyaları bulunuyorsa, sayfa o (daha büyük) modeli
-# kullanır; yoksa web/model/ içindeki küçük model yayınlanır.
+# web/ klasörünü GitHub Pages'te yayınlar. Model iki yerden gelebilir:
+# repodaki web/model/ klasörü ya da en son Release'teki model.json + model.bin.
+# Hangisi daha yeniyse o kullanılır.
 #
 # Yeni bir Release yükledikten sonra: Actions → sohbet-sayfasi → "Run workflow".
 # (Release olayıyla otomatik çalıştırılmıyor: o çalışma etiket (v1) üzerinden
@@ -30,16 +30,24 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Release'teki modeli al (varsa)
+        with:
+          fetch-depth: 0  # web/model'in son değiştiği tarihi görmek için tüm geçmiş
+      - name: Release'teki modeli al (repodakinden yeniyse)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release download --repo "$GITHUB_REPOSITORY" --pattern 'model.json' --pattern 'model.bin' -D yeni_model 2>/dev/null \
+          # İki yerden model gelebilir: repodaki web/model/ ya da en son Release.
+          # Hangisi daha yeniyse o yayınlanır.
+          rel=$(gh release view --repo "$GITHUB_REPOSITORY" --json publishedAt -q .publishedAt 2>/dev/null || true)
+          repo=$(git log -1 --format=%cI -- web/model)
+          echo "Release: ${rel:-yok} | repodaki model: $repo"
+          if [ -n "$rel" ] && [ "$(date -d "$rel" +%s)" -gt "$(date -d "$repo" +%s)" ] \
+             && gh release download --repo "$GITHUB_REPOSITORY" --pattern 'model.json' --pattern 'model.bin' -D yeni_model \
              && [ -f yeni_model/model.json ] && [ -f yeni_model/model.bin ]; then
             cp yeni_model/model.json yeni_model/model.bin web/model/
             echo "Release'teki model kullanılıyor"
           else
-            echo "Release modeli yok, web/model içindeki küçük model kullanılıyor"
+            echo "Repodaki web/model kullanılıyor"
           fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

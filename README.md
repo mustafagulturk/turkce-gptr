@@ -109,6 +109,20 @@ Perplexity 121, modelin her adımda kabaca 8192 token yerine 121 seçenek arası
 
 İnce ayardan sonra model `<|kullanici|>` / `<|asistan|>` biçimini öğreniyor ve soruya tek cümlelik, dilbilgisi düzgün cevaplar veriyor. Ancak cevapların içeriği soruyla henüz ilgisiz; 3.3M parametre ve 183 örnek bilgi öğrenmeye yetmiyor.
 
+### `kucuk` model (Colab) ve sohbet verisinin etkisi
+
+Sitedeki model `kucuk` boyutta (34M parametre): Colab'ın ücretsiz T4 GPU'sunda Türkçe Wikipedia'dan 300 MB metinle yaklaşık 2 saat ön eğitim gördü. Sonra iki farklı sohbet verisiyle ince ayar yapıldı. Aynı sorular, aynı örnekleme ayarları (sıcaklık 0.4):
+
+| Soru | 183 örnekle | 1.876 örnekle (`veri/sohbet_olustur.py`) |
+|---|---|---|
+| Merhaba, sen kimsin? | Merhaba, Türkiye'nin başkentidir. | Adım Çınar. Türkçe metinlerle eğitilmiş küçük bir yapay zekâ dil modeliyim. |
+| anlamadım | anlamadı. Bir gün sonra, bir haber sitesinin açıldığı… | Kusura bakmayın, anlaşılır olamadım. Sorunuzu biraz daha açık yazarsanız tekrar deneyeyim. |
+| Yarın sınavım var, ne yapayım? | Yarın Yazarı, Ankara'da ve İstanbul'daki Atatürk Olimpiyat Oyunları'nda temsil edildi. | Her gün aynı saatte yatıp kalkın, yatmadan önce ekrana bakmayın… |
+| 7 artı 8 kaç eder? | 7 artı 8, 81 eder. | 7 + 8 = 18. |
+| Antalya hakkında bilgi ver. | T.C.'nin Akdeniz'e kıyısı bulunan… bir tarih bilgesidir. | Ankara, Türkiye'nin başkentidir… |
+
+Daha çok sohbet örneği modele **nasıl cevap verileceğini** öğretti: selamlaşma, kendini tanıtma, "anlamadım" gibi durumlar artık düzgün. Ama **bilgi** ve **hesap** öğretmedi: toplama sorusunun biçimini doğru kuruyor ama sonucu tahmin ediyor, veride olmayan bir şehri sorunca en yakın ezberlediği cevabı (Ankara) veriyor. Bunlar daha büyük model ve çok daha fazla veri ister.
+
 ## Kendin nasıl değiştirirsin?
 
 - **Kendi metninle eğit:** Belgeleri boş satırla ayrılmış bir `.txt` dosyasına koy, `python -m turkce_gpt veri --kaynak dosya --dosya metnim.txt --cikti veri/benim` çalıştır.
@@ -118,7 +132,8 @@ Perplexity 121, modelin her adımda kabaca 8192 token yerine 121 seçenek arası
   python -m turkce_gpt veri --kaynak dosya --dosya yeni.txt --cikti veri/yeni --tokenizer modeller/mini/model.pt
   python -m turkce_gpt egit --veri veri/yeni --baslangic-modeli modeller/mini/model.pt --cikti modeller/mini-2 --lr 3e-4
   ```
-- **Sohbet örneği ekle:** `veri/sohbet.jsonl` dosyasına aynı biçimde yeni satırlar ekle, `ince-ayar` komutunu tekrar çalıştır.
+- **Sohbet örneği ekle:** `veri/sohbet_olustur.py` içindeki listelere yeni soru-cevaplar ekle, `python veri/sohbet_olustur.py` ile `veri/sohbet_genis.jsonl`'i yeniden üret ve `ince-ayar --veri veri/sohbet_genis.jsonl` çalıştır.
+- **Elinde sadece sitedeki model varsa:** `python -m turkce_gpt web-ice-aktar --web web/model --cikti modeller/geri/model.pt` tarayıcı modelini tekrar eğitilebilir `model.pt`'ye çevirir (int8'den geri çözülür, ince ayar için yeterli).
 - **Yeni bir örnekleme yöntemi dene:** `GPT._sample` fonksiyonu (`turkce_gpt/model.py`) sıcaklık, top-k ve top-p'nin uygulandığı yer.
 
 Testler: `python -m pytest -q`
