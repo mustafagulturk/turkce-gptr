@@ -247,6 +247,24 @@ def train(args: argparse.Namespace) -> None:
         best_val = float(extra.get("best_val_loss", float("inf")))
         elapsed_before = float(extra.get("sure", 0.0))
         print(f"Kaldığı yerden devam ediliyor: adım {start_step}, en iyi val loss {best_val:.4f}")
+    elif args.baslangic_modeli:
+        # Kayıtlı bir modelin ağırlıklarıyla başla ("devam eğitimi"). --devam'dan
+        # farkı: optimizer ve adım sayacı sıfırdan başlar, veri yeni olabilir.
+        # Yeni bilgi öğrenirken eskisini unutmasın diye lr'yi ilk eğitimden
+        # düşük tutmak (ör. 3e-4) iyi bir alışkanlıktır.
+        model, start_tokenizer, _ = load_checkpoint(args.baslangic_modeli, device=device)
+        if start_tokenizer.merges != tokenizer.merges:
+            raise SystemExit(
+                "Hata: başlangıç modelinin tokenizer'ı bu verininkiyle aynı değil. Veriyi "
+                f"'veri --tokenizer {args.baslangic_modeli}' ile hazırlayın."
+            )
+        if args.dropout is not None:
+            for module in model.modules():
+                if isinstance(module, torch.nn.Dropout):
+                    module.p = args.dropout
+        print(f"Başlangıç ağırlıkları: {args.baslangic_modeli}")
+        if log_path.exists():
+            log_path.unlink()
     else:
         if args.devam:
             print(f"UYARI: {state_path} bulunamadı, eğitim sıfırdan başlıyor.")
@@ -289,7 +307,8 @@ def train(args: argparse.Namespace) -> None:
 
     print("=" * 70)
     print(f"Cihaz           : {device}")
-    print(f"Model           : '{args.boyut}' boyutu, {format_count(n_params)} parametre "
+    model_name = args.baslangic_modeli if (args.baslangic_modeli and not resume) else f"'{args.boyut}' boyutu"
+    print(f"Model           : {model_name}, {format_count(n_params)} parametre "
           f"({config.n_layer} katman, {config.n_head} başlık, genişlik {config.n_embd}, bağlam {block_size})")
     print(f"Sözlük          : {config.vocab_size} token")
     print(f"Adım başına     : {args.batch} x {args.birikim} (birikim) x {block_size} = {tokens_per_step:,} token")
@@ -441,6 +460,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--cihaz", default="auto", help="auto, cpu, cuda veya mps")
     p.add_argument("--derle", action="store_true", help="torch.compile ile hızlandır (GPU'da önerilir)")
     p.add_argument("--devam", action="store_true", help="çıktı klasöründeki durum.pt'den eğitime devam et")
+    p.add_argument("--baslangic-modeli", default=None,
+                   help="sıfırdan değil, bu model.pt'nin ağırlıklarından başla (yeni veriyle devam eğitimi; "
+                        "veri aynı tokenizer'la hazırlanmış olmalı)")
     p.add_argument("--tohum", type=int, default=1337, help="rastgelelik tohumu (tekrarlanabilirlik için)")
     return p
 

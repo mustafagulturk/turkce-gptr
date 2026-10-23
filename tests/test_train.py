@@ -126,6 +126,37 @@ def test_train_cli_writes_model_and_log(tmp_path, data_dir, capsys):
         assert [int(r["adim"]) for r in csv.DictReader(f)] == [3, 6, 8]
 
 
+def test_train_cli_starts_from_saved_model(tmp_path, data_dir):
+    from turkce_gpt.train import cli
+
+    base = tmp_path / "temel"
+    common = ["--veri", str(data_dir), "--boyut", "deneme", "--blok", "32", "--batch", "4", "--isinma", "1",
+              "--degerlendirme-araligi", "4", "--degerlendirme-batch", "2", "--ornek-uzunluk", "0",
+              "--cihaz", "cpu"]
+    cli(common + ["--cikti", str(base), "--adim", "4"])
+    first, _, _ = load_checkpoint(base / "model.pt")
+
+    # Kayıtlı modelin ağırlıklarından başlayıp aynı mimariyle eğitime devam eder.
+    cont = tmp_path / "devam"
+    cli(common + ["--cikti", str(cont), "--adim", "4", "--baslangic-modeli", str(base / "model.pt")])
+    second, _, _ = load_checkpoint(cont / "model.pt")
+    assert second.config == first.config
+    with open(cont / "log.csv", encoding="utf-8") as f:
+        assert [int(r["adim"]) for r in csv.DictReader(f)] == [4]
+
+
+def test_train_cli_rejects_different_tokenizer(tmp_path, data_dir):
+    from turkce_gpt.train import cli
+
+    other = BPETokenizer()
+    other.train(["tamamen farklı bir metin, başka kelimeler"] * 3, vocab_size=300)
+    model = tiny_model(other.vocab_size)
+    save_checkpoint(tmp_path / "baska.pt", model, other, {})
+    with pytest.raises(SystemExit):
+        cli(["--veri", str(data_dir), "--cikti", str(tmp_path / "x"), "--adim", "1", "--cihaz", "cpu",
+             "--baslangic-modeli", str(tmp_path / "baska.pt")])
+
+
 # ------------------------------------------------------------- ince-ayar cli
 def test_finetune_cli_runs_on_small_jsonl(tmp_path, tokenizer):
     base = tmp_path / "base.pt"

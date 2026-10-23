@@ -177,3 +177,31 @@ def test_token_dataset_errors(prepared, tmp_path) -> None:
         ds.get_batch("test", batch_size=1, block_size=4)
     with pytest.raises(FileNotFoundError):
         TokenDataset(tmp_path / "yok")
+
+
+def test_prepare_reuses_existing_tokenizer(prepared, tmp_path) -> None:
+    # Kayıtlı bir modelin üstüne eğitmek için yeni veri ESKİ tokenizer'la kodlanmalı.
+    from turkce_gpt.tokenizer import BPETokenizer
+
+    out, _ = prepared
+    txt = tmp_path / "yeni.txt"
+    txt.write_text("\n\n".join(f"{i}. yeni belge : {SENTENCES[i % 6]}" for i in range(20)) + "\n",
+                   encoding="utf-8")
+    new_out = tmp_path / "yeni_hazir"
+    meta = prepare("dosya", new_out, vocab_size=999, val_ratio=0.1, seed=0, file_path=txt, workers=1,
+                   tokenizer_path=out / "tokenizer.json")
+    old = BPETokenizer.load(out / "tokenizer.json")
+    new = BPETokenizer.load(new_out / "tokenizer.json")
+    assert new.merges == old.merges
+    assert meta["vocab_size"] == old.vocab_size  # --sozluk yok sayıldı
+
+
+def test_collect_documents_skip_mb(tmp_path) -> None:
+    from turkce_gpt.data import collect_documents
+
+    txt = tmp_path / "metin.txt"
+    txt.write_text("\n\n".join(BLOCKS) + "\n", encoding="utf-8")
+    all_docs = collect_documents("dosya", None, file_path=txt)
+    first_mb = len(all_docs[0].encode("utf-8")) / (1024 * 1024)
+    rest = collect_documents("dosya", None, file_path=txt, skip_mb=first_mb)
+    assert rest == all_docs[1:]

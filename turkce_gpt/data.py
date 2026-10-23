@@ -354,8 +354,14 @@ def collect_documents(
     file_path: str | Path | None = None,
     cache_dir: str | Path = "veri/onbellek",
     sentences_per_doc: int = 8,
+    skip_mb: float = 0,
 ) -> list[str]:
-    """Kaynaktan belgeleri okur, temizler, tekrarları atar; en fazla max_mb kadar."""
+    """Kaynaktan belgeleri okur, temizler, tekrarları atar; en fazla max_mb kadar.
+
+    skip_mb: baştaki bu kadar MB'lık belgeyi atlar. Aynı kaynaktan ikinci bir
+    eğitim yaparken modelin daha önce görmediği metni almak için kullanılır
+    (ör. ilk eğitim 300 MB aldıysa ikincisinde --atla-mb 300).
+    """
     if source == "ud":
         raw: Iterable[str] = ud_documents(cache_dir, sentences_per_doc)
     elif source == "wikipedia":
@@ -370,8 +376,13 @@ def collect_documents(
     limit = None if max_mb is None else int(max_mb * 1024 * 1024)
     docs: list[str] = []
     n_bytes = 0
+    skip = int(skip_mb * 1024 * 1024)
+    skipped = 0
     cleaned = (clean_document(d) for d in raw)
     for doc in deduplicate(d for d in cleaned if d):
+        if skipped < skip:
+            skipped += len(doc.encode("utf-8"))
+            continue
         docs.append(doc)
         n_bytes += len(doc.encode("utf-8"))
         if len(docs) % 50_000 == 0:
@@ -419,6 +430,23 @@ def sample_for_tokenizer(docs: list[str], max_mb: float, seed: int) -> list[str]
     return sample
 
 
+def load_tokenizer(path: str | Path) -> BPETokenizer:
+    """tokenizer.json'dan ya da bir model dosyasının (.pt) içinden tokenizer'ı yükler.
+
+    Model dosyası tokenizer'ı da içinde taşıdığı için, kayıtlı bir modelin
+    üstüne eğitirken doğrudan o model.pt dosyasını vermek yeterlidir.
+    """
+    path = Path(path)
+    if path.suffix == ".pt":
+        import torch  # sadece gerektiğinde; veri hazırlama torch'suz da çalışsın
+
+        from .checkpoint import tokenizer_from_dict
+
+        checkpoint = torch.load(path, map_location="cpu", weights_only=True)
+        return tokenizer_from_dict(checkpoint["tokenizer"])
+    return BPETokenizer.load(path)
+
+
 def prepare(
     source: str,
     out_dir: str | Path,
@@ -431,6 +459,8 @@ def prepare(
     tokenizer_mb: float = 20,
     sentences_per_doc: int = 8,
     workers: int | None = None,
+    tokenizer_path: str | Path | None = None,
+    skip_mb: float = 0,
 ) -> dict:
     """Tüm boru hattını çalıştırır ve meta bilgisini (sözlük olarak) döner."""
     if vocab_size > 65536:
@@ -441,7 +471,7 @@ def prepare(
     t0 = time.time()
 
     print(f"[1/4] Belgeler okunuyor ve temizleniyor (kaynak: {source}) ...", flush=True)
-    docs = collect_documents(source, max_mb, file_path, cache_dir, sentences_per_doc)
+    docs = collect_documents(source, max_mb, file_path, cache_dir, sentences_per_doc, skip_mb)
     if len(docs) < 2:
         raise SystemExit("Hata: temizlikten sonra en az 2 belge kalmalı (eğitim + doğrulama)")
     total_bytes = sum(len(d.encode("utf-8")) for d in docs)
@@ -451,20 +481,28 @@ def prepare(
     del docs
     print(f"  eğitim: {len(train_docs):,} belge, doğrulama: {len(val_docs):,} belge", flush=True)
 
-    # Tokenizer'ı SADECE eğitim belgeleriyle eğitiyoruz; doğrulama verisi
-    # hiçbir aşamada "görülmemiş" kalmalı.
-    print(f"[2/4] Tokenizer eğitiliyor (sözlük: {vocab_size}) ...", flush=True)
-    tok_docs = sample_for_tokenizer(train_docs, tokenizer_mb, seed)
-    if len(tok_docs) < len(train_docs):
-        print(f"  büyük veri: tokenizer {len(tok_docs):,} belgelik örnekle eğitilecek", flush=True)
-    t1 = time.time()
-    tokenizer = BPETokenizer()
-    tokenizer.train(tok_docs, vocab_size, verbose=True)
+    if tokenizer_path is not None:
+        # Var olan bir modelin üstüne eğiteceksek tokenizer DEĞİŞMEMELİ: model
+        # "ev" kelimesini örneğin 812 numarasıyla öğrendi. Yeni bir tokenizer
+        # aynı parçaya başka numara verirse model öğrendiklerini kullanamaz.
+        # Bu yüzden yeni veriyi eski tokenizer'la kodluyoruz.
+        print(f"[2/4] Var olan tokenizer kullanılıyor: {tokenizer_path}", flush=True)
+        tokenizer = load_tokenizer(tokenizer_path)
+    else:
+        # Tokenizer'ı SADECE eğitim belgeleriyle eğitiyoruz; doğrulama verisi
+        # hiçbir aşamada "görülmemiş" kalmalı.
+        print(f"[2/4] Tokenizer eğitiliyor (sözlük: {vocab_size}) ...", flush=True)
+        tok_docs = sample_for_tokenizer(train_docs, tokenizer_mb, seed)
+        if len(tok_docs) < len(train_docs):
+            print(f"  büyük veri: tokenizer {len(tok_docs):,} belgelik örnekle eğitilecek", flush=True)
+        t1 = time.time()
+        tokenizer = BPETokenizer()
+        tokenizer.train(tok_docs, vocab_size, verbose=True)
+        print(f"  {tokenizer.vocab_size} token öğrenildi ({time.time() - t1:.1f} sn)", flush=True)
+        if tokenizer.vocab_size < vocab_size:
+            print("  not: veri küçük olduğu için istenen sözlük boyutuna ulaşılamadı", flush=True)
     tokenizer_path = out_dir / "tokenizer.json"
     tokenizer.save(tokenizer_path)
-    print(f"  {tokenizer.vocab_size} token öğrenildi ({time.time() - t1:.1f} sn)", flush=True)
-    if tokenizer.vocab_size < vocab_size:
-        print("  not: veri küçük olduğu için istenen sözlük boyutuna ulaşılamadı", flush=True)
 
     print("[3/4] Belgeler kodlanıyor ...", flush=True)
     train_tokens = encode_to_file(train_docs, tokenizer, tokenizer_path, out_dir / "train.bin", workers, "eğitim")
@@ -599,6 +637,12 @@ def cli(argv: list[str]) -> None:
                         help="tokenizer en fazla bu kadar MB'lık örnekle eğitilir (BPE yavaştır) (varsayılan: %(default)s)")
     parser.add_argument("--cumle-sayisi", type=int, default=8,
                         help="ud kaynağında bir belgede birleştirilecek ardışık cümle sayısı (varsayılan: %(default)s)")
+    parser.add_argument("--atla-mb", type=float, default=0,
+                        help="kaynağın baştaki bu kadar MB'ını atla; aynı kaynaktan yeni (görülmemiş) metin almak için "
+                             "(varsayılan: %(default)s)")
+    parser.add_argument("--tokenizer", default=None,
+                        help="yeni tokenizer eğitmek yerine bunu kullan: tokenizer.json ya da model.pt. "
+                             "Kayıtlı bir modelin üstüne yeni veriyle eğitirken gereklidir (--sozluk yok sayılır)")
     parser.add_argument("--isci", type=int, default=None,
                         help="paralel kodlama için süreç sayısı (varsayılan: çekirdek sayısı)")
     args = parser.parse_args(argv)
@@ -618,6 +662,8 @@ def cli(argv: list[str]) -> None:
         tokenizer_mb=args.tokenizer_mb,
         sentences_per_doc=args.cumle_sayisi,
         workers=args.isci,
+        tokenizer_path=args.tokenizer,
+        skip_mb=args.atla_mb,
     )
 
 

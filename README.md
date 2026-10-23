@@ -108,6 +108,11 @@ Perplexity 121, modelin her adımda kabaca 8192 token yerine 121 seçenek arası
 
 - **Kendi metninle eğit:** Belgeleri boş satırla ayrılmış bir `.txt` dosyasına koy, `python -m turkce_gpt veri --kaynak dosya --dosya metnim.txt --cikti veri/benim` çalıştır.
 - **Modeli büyüt:** `turkce_gpt/config.py` içindeki `PRESETS` sözlüğüne yeni bir boyut ekle (`n_embd`, `n_head`'e bölünmeli).
+- **Kayıtlı modeli yeni metinle eğitmeye devam et:** Baştan eğitmek gerekmez, ama tokenizer aynı kalmalı.
+  ```bash
+  python -m turkce_gpt veri --kaynak dosya --dosya yeni.txt --cikti veri/yeni --tokenizer modeller/mini/model.pt
+  python -m turkce_gpt egit --veri veri/yeni --baslangic-modeli modeller/mini/model.pt --cikti modeller/mini-2 --lr 3e-4
+  ```
 - **Sohbet örneği ekle:** `veri/sohbet.jsonl` dosyasına aynı biçimde yeni satırlar ekle, `ince-ayar` komutunu tekrar çalıştır.
 - **Yeni bir örnekleme yöntemi dene:** `GPT._sample` fonksiyonu (`turkce_gpt/model.py`) sıcaklık, top-k ve top-p'nin uygulandığı yer.
 
