@@ -1,4 +1,4 @@
-# Türkçe GPT
+# Çınar: sıfırdan Türkçe dil modeli
 
 Sıfırdan yazılmış, Türkçe metinle eğitilen küçük bir dil modeli. Hazır bir yapay zekâ servisine bağlanmıyor; tokenizer'dan transformer'a, eğitim döngüsünden sohbet ekranına kadar her parça bu depoda, PyTorch ile elle yazıldı. ChatGPT gibi modellerin nasıl çalıştığını küçük ölçekte baştan sona gösteriyor.
 

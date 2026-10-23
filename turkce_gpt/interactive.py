@@ -234,7 +234,7 @@ def chat_cli(argv: list[str]) -> None:
     reply_budget = min(args.uzunluk, block_size // 2)
     max_prompt_tokens = block_size - reply_budget
 
-    print(f"Türkçe GPT sohbet ({device}). Komutlar: /temizle, /cikis")
+    print(f"Çınar sohbet ({device}). Komutlar: /temizle, /cikis")
     history: list[dict] = []
 
     while True:
@@ -256,7 +256,7 @@ def chat_cli(argv: list[str]) -> None:
         ids = build_chat_ids(tokenizer, history, max_prompt_tokens)
         idx = torch.tensor([ids], dtype=torch.long, device=device)
 
-        print("Türkçe GPT: ", end="", flush=True)
+        print("Çınar: ", end="", flush=True)
         decoder = IncrementalDecoder(tokenizer)
         reply_ids: list[int] = []
         try:

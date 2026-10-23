@@ -1,4 +1,4 @@
-// Türkçe GPT'nin tarayıcıda çalışan hali.
+// Çınar'ın tarayıcıda çalışan hali.
 //
 // PyTorch'taki turkce_gpt/model.py ve turkce_gpt/tokenizer.py'nin JavaScript
 // karşılığı. Hiçbir kütüphane kullanmaz: tokenizer, matris-vektör çarpımı,
