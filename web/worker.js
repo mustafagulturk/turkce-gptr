@@ -2,7 +2,7 @@
 // sayfa donmaz, yazı ekrana akarken kaydırma ve yazma devam eder.
 // Worker açılamayan tarayıcılarda app.js bu dosyayı sayfanın içinde de çalıştırabilir;
 // o yüzden mesajlaşma `post` fonksiyonuyla soyutlandı.
-import { loadModel, sample } from "./motor.js?v=5";
+import { loadModel, sample } from "./motor.js?v=6";
 
 let tokenizer = null, model = null, stopped = false;
 let post = msg => self.postMessage(msg);

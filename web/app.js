@@ -16,7 +16,7 @@ $("yukleme-yazi").textContent = "Model başlatılıyor…";
 // çalıştır (cevap üretilirken sayfa biraz takılabilir ama çalışır).
 let toModel, started = false;
 try {
-  const worker = new Worker(new URL("./worker.js?v=5", import.meta.url), { type: "module" });
+  const worker = new Worker(new URL("./worker.js?v=6", import.meta.url), { type: "module" });
   worker.onmessage = e => { started = true; onMessage(e.data); };
   worker.onerror = () => { if (!started) { worker.terminate(); runInPage(); } };
   toModel = msg => worker.postMessage(msg);
@@ -31,7 +31,7 @@ async function runInPage() {
   if (inPage) return;
   inPage = started = true;
   try {
-    const { startInPage } = await import("./worker.js?v=5");
+    const { startInPage } = await import("./worker.js?v=6");
     const handle = startInPage(msg => setTimeout(() => onMessage(msg), 0));
     toModel = msg => handle(msg);
     toModel({ type: "load", url: modelUrl });
@@ -81,16 +81,27 @@ function ask(text) {
   if (!text || busy) return;
   $("karsilama").hidden = true;
   bubble("kullanici", text);
-  messages.push({ role: "kullanici", content: text });
+  messages.push({ role: "kullanici", content: normalize(text) });
   current = { el: bubble("asistan yaziyor", ""), content: "" };
   busy = true;
   send.textContent = "Durdur";
   input.value = "";
   toModel({
     type: "generate",
-    messages,
-    settings: { temperature: +$("sicaklik").value, topP: +$("topp").value, topK: 50, repetitionPenalty: 1.1, maxTokens },
+    // Model sohbeti çoğunlukla tek soru-tek cevap örneklerinden öğrendi; uzun geçmişi
+    // verince kafası karışıyor. Bu yüzden modele yalnızca son soru gönderilir.
+    messages: messages.slice(-1),
+    // Tekrar cezası 1.3: aynı parçayı ("LİLİLİ…") tekrar tekrar üretmesini engeller.
+    settings: { temperature: +$("sicaklik").value, topP: +$("topp").value, topK: 40, repetitionPenalty: 1.3, maxTokens },
   });
+}
+
+// Tamamı BÜYÜK HARFLE yazılmış mesajı normal yazıma çevir: model eğitimde büyük
+// harfli metni neredeyse hiç görmediği için "SEN NE İŞE YARIYOSUN" onu şaşırtıyor.
+function normalize(text) {
+  if (text !== text.toLocaleUpperCase("tr") || !/\p{L}{3}/u.test(text)) return text;
+  const lower = text.toLocaleLowerCase("tr");
+  return lower.charAt(0).toLocaleUpperCase("tr") + lower.slice(1);
 }
 
 function finish() {
